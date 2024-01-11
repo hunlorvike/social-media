@@ -107,6 +107,7 @@ export class RoleService implements CrudService<Role, RoleModel, RoleDTO> {
     async remove(id: number): Promise<BaseResponse<boolean>> {
         try {
             const role = await this.roleRepository.findOne({ where: { id } });
+
             if (!role) {
                 return BaseResponse.error<boolean>(
                     HttpStatus.NOT_FOUND,
@@ -114,7 +115,9 @@ export class RoleService implements CrudService<Role, RoleModel, RoleDTO> {
                     'Internal Server Error',
                 );
             }
+
             await this.roleRepository.remove(role);
+
             return BaseResponse.success<boolean>('Role removed successfully', true);
         } catch (error) {
             console.error('Error removing role:', error);

@@ -29,34 +29,54 @@ export class UserService implements CrudService<User, UserModel, UserDTO> {
             await validateOrReject(newUser);
 
             const roleName = 'User';
+
+            // Find or create the role
             let userRole = await this.roleRepository.findOne({ where: { roleName } });
 
             if (!userRole) {
                 // If role doesn't exist, create and save it
                 userRole = await this.roleRepository.create({ roleName });
-                await this.roleRepository.save(userRole);
+                userRole = await this.roleRepository.save(userRole);
             }
+
+            // Assign role to the user
+            newUser.roles = [userRole];
 
             // Save the user to the database
             const savedUser = await this.userRepository.save(newUser);
 
+            // Manually synchronize the users_roles table
+            await this.userRepository
+                .createQueryBuilder()
+                .relation(User, "roles")
+                .of(savedUser)
+                .add(userRole);
 
             return BaseResponse.success<UserModel>('User created successfully', this.entityToModel(savedUser));
         } catch (error) {
             console.error('Error creating user:', error);
-            return BaseResponse.error<UserModel>(
-                HttpStatus.INTERNAL_SERVER_ERROR,
-                'Could not create user',
-                error.message || 'Internal Server Error',
-            );
+            if (error instanceof HttpException) {
+                // Xử lý các HttpException
+                return BaseResponse.error<UserModel>(error.getStatus(), error.message, 'Internal Server Error');
+            } else if (error.code === '23505') {
+                // Xử lý trường hợp trùng lặp (unique constraint violation)
+                return BaseResponse.error<UserModel>(HttpStatus.CONFLICT, 'User with this email or phone already exists', 'Internal Server Error');
+            } else {
+                // Xử lý các loại exception khác
+                return BaseResponse.error<UserModel>(HttpStatus.INTERNAL_SERVER_ERROR, 'Could not create user', 'Internal Server Error');
+            }
         }
     }
 
-
     async findAll(): Promise<BaseResponse<UserModel[]>> {
         try {
-            const users = await this.userRepository.find();
+            const users = await this.userRepository
+                .createQueryBuilder('user')
+                .leftJoinAndSelect('user.roles', 'roles')
+                .getMany();
+
             const userModels = users.map((user) => this.entityToModel(user));
+
             return BaseResponse.success<UserModel[]>('Users retrieved successfully', userModels);
         } catch (error) {
             console.error('Error retrieving users:', error);
@@ -68,9 +88,14 @@ export class UserService implements CrudService<User, UserModel, UserDTO> {
         }
     }
 
+
     async findOne(id: number): Promise<BaseResponse<UserModel>> {
         try {
-            const user = await this.userRepository.findOne({ where: { id } });
+            const user = await this.userRepository
+                .createQueryBuilder('user')
+                .leftJoinAndSelect('user.roles', 'roles')
+                .where('user.id = :id', { id })
+                .getOne();
 
             if (!user) {
                 throw new HttpException(`User with id ${id} not found`, HttpStatus.NOT_FOUND);
@@ -87,6 +112,7 @@ export class UserService implements CrudService<User, UserModel, UserDTO> {
         }
     }
 
+
     async update(id: number, data: UserDTO): Promise<BaseResponse<UserModel>> {
         try {
             const updatedUser = await this.userRepository.findOne({ where: { id } });
@@ -100,11 +126,11 @@ export class UserService implements CrudService<User, UserModel, UserDTO> {
             return BaseResponse.success<UserModel>('User updated successfully', this.entityToModel(updatedUser));
         } catch (error) {
             console.error('Error updating user:', error);
-            return BaseResponse.error<UserModel>(
-                HttpStatus.INTERNAL_SERVER_ERROR,
-                'Could not update user',
-                error.message || 'Internal Server Error',
-            );
+            if (error instanceof HttpException) {
+                return BaseResponse.error<UserModel>(error.getStatus(), error.message, 'Internal Server Error');
+            } else {
+                return BaseResponse.error<UserModel>(HttpStatus.INTERNAL_SERVER_ERROR, 'Could not update user', 'Internal Server Error');
+            }
         }
     }
 
@@ -121,11 +147,12 @@ export class UserService implements CrudService<User, UserModel, UserDTO> {
             return BaseResponse.success<boolean>('User removed successfully', true);
         } catch (error) {
             console.error('Error removing user:', error);
-            return BaseResponse.error<boolean>(
-                HttpStatus.INTERNAL_SERVER_ERROR,
-                'Could not remove user',
-                error.message || 'Internal Server Error',
-            );
+            if (error instanceof HttpException) {
+                return BaseResponse.error<boolean>(error.getStatus(), error.message, 'Internal Server Error');
+            } else {
+                return BaseResponse.error<boolean>(HttpStatus.INTERNAL_SERVER_ERROR, 'Could not remove user', 'Internal Server Error');
+            }
+
         }
     }
 

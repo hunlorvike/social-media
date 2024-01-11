@@ -1,3 +1,5 @@
+import { AuthModule } from './modules/auth.module';
+import { AuthController } from './controllers/auth.controller';
 import { RoleModule } from './modules/role.module';
 import { UserModule } from './modules/user.module';
 import { Module } from '@nestjs/common';
@@ -7,11 +9,13 @@ import { DatabaseModule } from './modules/database.module';
 
 @Module({
   imports: [
+        AuthModule, 
     DatabaseModule, // Ensure this module includes TypeOrmModule.forRoot
     RoleModule,
     UserModule,
   ],
-  controllers: [AppController],
+  controllers: [
+        AuthController, AppController],
   providers: [AppService],
 })
 export class AppModule { }
