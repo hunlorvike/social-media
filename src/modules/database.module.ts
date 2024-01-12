@@ -6,8 +6,6 @@ import * as dotenv from 'dotenv';
 import { Role } from 'src/entities/role.entity';
 import { User } from 'src/entities/user.entity';
 
-dotenv.config();
-
 
 @Module({
     imports: [

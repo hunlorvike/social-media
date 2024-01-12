@@ -1,22 +1,36 @@
+import { TestController } from './controllers/test.controller';
 import { AuthModule } from './modules/auth.module';
-import { AuthController } from './controllers/auth.controller';
 import { RoleModule } from './modules/role.module';
 import { UserModule } from './modules/user.module';
 import { Module } from '@nestjs/common';
-import { AppController } from './app.controller';
-import { AppService } from './app.service';
 import { DatabaseModule } from './modules/database.module';
+import { JwtStrategy } from './configs/strategy/jwt.strategy';
+import { ConfigModule } from '@nestjs/config';
+import { JWT_CONFIG } from './configs/jwt.config';
+import { JwtService } from '@nestjs/jwt';
 
 @Module({
   imports: [
-        AuthModule, 
-    DatabaseModule, // Ensure this module includes TypeOrmModule.forRoot
+    ConfigModule.forRoot(),
+    AuthModule,
+    DatabaseModule,
     RoleModule,
     UserModule,
   ],
   controllers: [
-        AuthController, AppController],
-  providers: [AppService],
+    TestController,
+  ],
+  providers: [
+    JwtStrategy,
+    JwtService,
+    {
+      provide: JWT_CONFIG,
+      useValue: {
+        secret: process.env.JWT_SECRET || 'aLongSecretStringWhoseBitnessIsEqualToOrGreaterThanTheBitnessOfTheTokenEncryptionAlgorithm',
+        accessTokenTtl: process.env.JWT_ACCESS_TOKEN_TTL || '3600s',
+      },
+    }
+  ],
 })
 export class AppModule { }
 

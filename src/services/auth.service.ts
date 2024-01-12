@@ -8,7 +8,7 @@ import { Role } from 'src/entities/role.entity';
 import { JwtService } from '@nestjs/jwt';
 import { RegisterDTO } from 'src/dtos/register.dto';
 import { LoginDTO } from 'src/dtos/login.dto';
-import { JWT_CONFIG, JwtConfig } from 'src/configs/jwt.config';
+import { JWT_CONFIG } from 'src/configs/jwt.config';
 
 
 @Injectable()
@@ -18,8 +18,8 @@ export class AuthService {
         private readonly userRepository: Repository<User>,
         @InjectRepository(Role)
         private readonly roleRepository: Repository<Role>,
-        private readonly jwtService: JwtService,
-        @Inject(JWT_CONFIG) private readonly jwtConfig: JwtConfig
+        private readonly jwtService: JwtService
+
     ) { }
 
     async register(registerDTO: RegisterDTO): Promise<User> {
@@ -62,7 +62,7 @@ export class AuthService {
         // Find the user by email
         const user = await this.userRepository.findOne({
             where: { email },
-            relations: ['roles'], 
+            relations: ['roles'],
         });
         // Check if the user exists
         if (!user) {
@@ -102,6 +102,7 @@ export class AuthService {
         }
     }
 
+    // Generate Token
     async generateAccessToken(user: Partial<User>): Promise<{ accessToken: string }> {
         const payload = {
             sub: user.id,
@@ -110,11 +111,39 @@ export class AuthService {
         };
 
         const accessToken = await this.jwtService.signAsync(payload, {
-            expiresIn: JwtConfig.accessTokenTtl,
-            secret: JwtConfig.secret,
+            expiresIn: process.env.JWT_ACCESS_TOKEN_TTL || '3600s',
+            secret: process.env.JWT_SECRET || 'aLongSecretStringWhoseBitnessIsEqualToOrGreaterThanTheBitnessOfTheTokenEncryptionAlgorithm',
         });
 
         return { accessToken };
+    }
+
+    // Valid token
+    async validateToken(token: string): Promise<any> {
+        try {
+            return this.jwtService.verify(token);
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    // Get role
+    async getUserRoles(userId: number): Promise<string[]> {
+        try {
+            const user = await this.userRepository.findOne({
+                where: { id: userId },
+                relations: ['roles'],
+            });
+
+            if (user) {
+                return user.roles.map((role) => role.roleName);
+            }
+
+            return [];
+        } catch (error) {
+            console.error('Error getting user roles:', error);
+            throw new Error('Could not get user roles');
+        }
     }
 
 
