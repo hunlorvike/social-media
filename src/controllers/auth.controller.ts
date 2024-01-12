@@ -13,10 +13,10 @@ export class AuthController {
         return this.authService.register(registerDTO);
     }
 
-    // @Post('login')
-    // @HttpCode(200)
-    // async login(@Body() loginDTO: LoginDTO): Promise<{ accessToken: string }> {
-    //     return this.authService.login(loginDTO);
-    // }
+    @Post('login')
+    @HttpCode(200)
+    async login(@Body() loginDTO: LoginDTO): Promise<{ accessToken: string }> {
+        return this.authService.login(loginDTO);
+    }
 
 }

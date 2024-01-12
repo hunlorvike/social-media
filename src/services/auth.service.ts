@@ -1,5 +1,5 @@
 import * as bcrypt from 'bcrypt';
-import { Injectable, NotFoundException, UnauthorizedException, ConflictException } from '@nestjs/common';
+import { Injectable, NotFoundException, UnauthorizedException, ConflictException, Inject } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from 'src/entities/user.entity';
@@ -8,6 +8,8 @@ import { Role } from 'src/entities/role.entity';
 import { JwtService } from '@nestjs/jwt';
 import { RegisterDTO } from 'src/dtos/register.dto';
 import { LoginDTO } from 'src/dtos/login.dto';
+import { JWT_CONFIG, JwtConfig } from 'src/configs/jwt.config';
+
 
 @Injectable()
 export class AuthService {
@@ -16,7 +18,8 @@ export class AuthService {
         private readonly userRepository: Repository<User>,
         @InjectRepository(Role)
         private readonly roleRepository: Repository<Role>,
-        // private readonly jwtService: JwtService,
+        private readonly jwtService: JwtService,
+        @Inject(JWT_CONFIG) private readonly jwtConfig: JwtConfig
     ) { }
 
     async register(registerDTO: RegisterDTO): Promise<User> {
@@ -53,28 +56,31 @@ export class AuthService {
         }
     }
 
-    // async login(LoginDTO: LoginDTO): Promise<{ accessToken: string }> {
-    //     const { email, password } = LoginDTO;
+    async login(LoginDTO: LoginDTO): Promise<{ accessToken: string }> {
+        const { email, password } = LoginDTO;
 
-    //     // Find the user by email
-    //     const user = await this.userRepository.findOne({ where: { email }, relations: ['roles'] });
+        // Find the user by email
+        const user = await this.userRepository.findOne({
+            where: { email },
+            relations: ['roles'], 
+        });
+        // Check if the user exists
+        if (!user) {
+            throw new NotFoundException('User not found');
+        }
 
-    //     // Check if the user exists
-    //     if (!user) {
-    //         throw new NotFoundException('User not found');
-    //     }
+        // Check if the provided password is correct
+        const isPasswordValid = await bcrypt.compare(password, user.password);
 
-    //     // Check if the provided password is correct
-    //     const isPasswordValid = await bcrypt.compare(password, user.password);
+        if (!isPasswordValid) {
+            throw new UnauthorizedException('Invalid credentials');
+        }
 
-    //     if (!isPasswordValid) {
-    //         throw new UnauthorizedException('Invalid credentials');
-    //     }
+        // Generate and return the access token
+        const accessTokenObject = await this.generateAccessToken(user);
+        return accessTokenObject;
+    }
 
-    //     // Generate and return the access token
-    //     const accessToken = this.generateAccessToken(user);
-    //     return { accessToken };
-    // }
 
     async changePassword(userId: number, newPassword: string): Promise<void> {
         try {
@@ -96,10 +102,20 @@ export class AuthService {
         }
     }
 
+    async generateAccessToken(user: Partial<User>): Promise<{ accessToken: string }> {
+        const payload = {
+            sub: user.id,
+            email: user.email,
+            role: user.roles.map(role => role.roleName),
+        };
 
-    // private generateAccessToken(user: User): string {
-    //     // Create a JWT token with the user ID and roles
-    //     const payload = { sub: user.id, roles: user.roles.map(role => role.roleName) };
-    //     return this.jwtService.sign(payload);
-    // }
+        const accessToken = await this.jwtService.signAsync(payload, {
+            expiresIn: JwtConfig.accessTokenTtl,
+            secret: JwtConfig.secret,
+        });
+
+        return { accessToken };
+    }
+
+
 }

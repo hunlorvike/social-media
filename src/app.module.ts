@@ -35,5 +35,5 @@ và AppModule thường là module chính của ứng dụng.
 + imports: là một mảng chứa các module khác mà module này phụ thuộc. Khi một module A import module B, module A sẽ có thể sử dụng các providers của module B mà B đã export.
 + controllers: là một mảng chứa các controllers. Controller là nơi xử lý các request từ client.
 + providers: là một mảng chứa các services hoặc các providers khác. Providers là các lớp, giá trị hoặc hàm có thể inject vào controller, service, module,…
-+ exports: là một mảng chứa các services hoặc các providers khác mà module này muốn chia sẻ với các module khác1.
++ exports: là một mảng chứa các services hoặc các providers khác mà module này muốn chia sẻ với các module khác.
 */
