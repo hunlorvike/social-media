@@ -1,25 +1,40 @@
-import { TestController } from './controllers/test.controller';
+import { PostModule } from './modules/post.module';
+import { Module } from '@nestjs/common';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { ConfigModule } from '@nestjs/config';
 import { AuthModule } from './modules/auth.module';
 import { RoleModule } from './modules/role.module';
 import { UserModule } from './modules/user.module';
-import { Module } from '@nestjs/common';
-import { DatabaseModule } from './modules/database.module';
+import { TestController } from './controllers/test.controller';
 import { JwtStrategy } from './configs/strategy/jwt.strategy';
-import { ConfigModule } from '@nestjs/config';
-import { JWT_CONFIG } from './configs/jwt.config';
 import { JwtService } from '@nestjs/jwt';
+import { JWT_CONFIG } from './configs/jwt.config';
+
 
 @Module({
   imports: [
+    PostModule,
+    TypeOrmModule.forRoot({
+      type: 'mysql',
+      host: 'localhost',
+      port: 3306,
+      username: 'root',
+      password: '',
+      database: 'nestjs_social',
+      entities: [
+        __dirname + '/**/*.entity{.ts,.js}',
+      ],
+      logging: true,
+      migrations: [__dirname + 'migrations', '*.{ts,js}'],
+      migrationsRun: true,
+      synchronize: true,
+    }),
     ConfigModule.forRoot(),
     AuthModule,
-    DatabaseModule,
     RoleModule,
-    UserModule,
+    UserModule,  // Không cần gọi .forRoot() nếu UserModule không cung cấp
   ],
-  controllers: [
-    TestController,
-  ],
+  controllers: [TestController],
   providers: [
     JwtStrategy,
     JwtService,
@@ -33,6 +48,7 @@ import { JwtService } from '@nestjs/jwt';
   ],
 })
 export class AppModule { }
+
 
 /*
 - Mọi thứ trong NestJS đều bắt đầu từ một module,

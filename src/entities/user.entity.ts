@@ -1,8 +1,11 @@
-import { Column, Entity, ManyToMany, PrimaryGeneratedColumn, JoinTable } from "typeorm";
+import { Column, Entity, ManyToMany, PrimaryGeneratedColumn, JoinTable, OneToMany, JoinColumn, Index } from "typeorm";
 import { Role } from "./role.entity";
 import { Gender } from "./gender.enum";
+import { Post } from "./post.entity";
 
 @Entity("users")
+@Index("idx_email", ["email"], { unique: true })
+@Index("idx_phone", ["phone"], { unique: true })
 export class User {
     @PrimaryGeneratedColumn()
     id: number;
@@ -20,7 +23,7 @@ export class User {
     @Column({ length: 255, unique: true })
     email: string;
 
-    @Column({ length: 20 })
+    @Column({ length: 20, unique: true })
     phone: string;
 
     @Column({ length: 255 })
@@ -35,6 +38,9 @@ export class User {
     @Column({ name: 'updated_at', type: 'timestamp', default: () => 'CURRENT_TIMESTAMP', onUpdate: 'CURRENT_TIMESTAMP' })
     updatedAt: Date;
 
+    @OneToMany(() => Post, post => post.author)
+    posts: Post[];
+
     @ManyToMany(() => Role, { cascade: true })
     @JoinTable({
         name: 'users_roles',
@@ -42,5 +48,4 @@ export class User {
         inverseJoinColumn: { name: 'role_id', referencedColumnName: 'id' },
     })
     roles: Role[];
-
 }

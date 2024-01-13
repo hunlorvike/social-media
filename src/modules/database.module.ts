@@ -1,6 +1,6 @@
 // src/modules/database.module.ts
 
-import { Module } from '@nestjs/common';
+import { Module, Post } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import * as dotenv from 'dotenv';
 import { Role } from 'src/entities/role.entity';
@@ -16,7 +16,7 @@ import { User } from 'src/entities/user.entity';
             username: process.env.DB_USERNAME || 'root',
             password: '',
             database: process.env.DB_DATABASE || 'nestjs_social',
-            entities: [User, Role],
+            entities: [User, Role, Post],
             synchronize: true,
         }),
         TypeOrmModule.forFeature([User, Role]),
