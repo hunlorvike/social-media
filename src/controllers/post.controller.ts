@@ -20,41 +20,6 @@ export class PostController {
         return this.postService.findOne(id);
     }
 
-    // @Post()
-    // async create(@Body() postData: PostDTO, @Req() request): Promise<BaseResponse<number | boolean | PostModel | PostModel[]>> {
-    //     try {
-    //         const token = request.headers.authorization;
-
-    //         const secretKey = process.env.JWT_SECRET || "aLongSecretStringWhoseBitnessIsEqualToOrGreaterThanTheBitnessOfTheTokenEncryptionAlgorithm";
-
-    //         const decodedToken = await this.jwtService.verifyAsync(token, {
-    //             secret: secretKey,
-    //         });
-
-    //         if (!decodedToken || !decodedToken.sub) {
-    //             return BaseResponse.error<number | boolean | PostModel | PostModel[]>(
-    //                 HttpStatus.UNAUTHORIZED,
-    //                 'Invalid or incomplete token',
-    //                 'Unauthorized',
-    //             );
-    //         }
-    //         const authorId = decodedToken.sub;
-    //         postData.authorId = authorId;
-
-    //         // Dữ liệu từ form-data đã được xử lý ở đây
-    //         console.log(postData);
-
-    //         return this.postService.create(postData);
-    //     } catch (error) {
-    //         console.log(error);
-    //         if (error.name === 'TokenExpiredError') {
-    //             throw new HttpException('Token has expired', HttpStatus.UNAUTHORIZED);
-    //         }
-
-    //         throw new HttpException('Error creating post', HttpStatus.INTERNAL_SERVER_ERROR);
-    //     }
-    // }
-
     @Post()
     @UseInterceptors(FileInterceptor('file'))
     async create(@UploadedFile() file, @Req() request: any): Promise<BaseResponse<number | boolean | PostModel | PostModel[]>> {
@@ -72,9 +37,8 @@ export class PostController {
             }
             const authorId = decodedToken.sub;
 
-            // Get the title and content from the form data
-            const title = request.body.title;
-            const content = request.body.content;
+            const title = request.body.title !== undefined ? request.body.title : '';
+            const content = request.body.content !== undefined ? request.body.content : '';
 
             const postData = { title, content, authorId };
 
@@ -110,8 +74,8 @@ export class PostController {
             const authorId = decodedToken.sub;
 
             // Get the title and content from the form data
-            const title = request.body.title;
-            const content = request.body.content;
+            const title = request.body.title !== undefined ? request.body.title : '';
+            const content = request.body.content !== undefined ? request.body.content : '';
 
             const postData = { title, content, authorId };
 
