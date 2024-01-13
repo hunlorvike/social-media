@@ -5,30 +5,49 @@ import { Observable } from 'rxjs';
 
 @Injectable()
 export class RolesGuard implements CanActivate {
-  constructor(
-    private reflector: Reflector,
-    private readonly jwtService: JwtService,
-  ) {}
+	constructor(
+		private reflector: Reflector,
+		private readonly jwtService: JwtService,
+	) { }
 
-  canActivate(
-    context: ExecutionContext,
-  ): boolean | Promise<boolean> | Observable<boolean> {
-    const roles = this.reflector.get<string[]>('roles', context.getHandler());
-    
-    if (!roles) {
-      return true;
-    }
+	async canActivate(context: ExecutionContext): Promise<boolean> {
+		const roles = this.reflector.get<string[]>('roles', context.getHandler());
 
-    const request = context.switchToHttp().getRequest();
-    const user = this.jwtService.decode(request.headers.authorization);
+		if (!roles) {
+			return true; // No roles required for this handler
+		}
 
-    if (!user || !user.role || !Array.isArray(user.role)) {
-      return false;
-    }
+		const request = context.switchToHttp().getRequest();
+		const token = request.headers.authorization;
 
-    const lowercaseRoles = roles.map(role => role.toLowerCase());
-    const userRoles = user.role.map(role => role.toLowerCase());
+		if (!token) {
+			return false; // No token provided
+		}
 
-    return lowercaseRoles.some((role) => userRoles.includes(role));
-  }
+		try {
+			const secretKey = process.env.JWT_SECRET || "aLongSecretStringWhoseBitnessIsEqualToOrGreaterThanTheBitnessOfTheTokenEncryptionAlgorithm";
+
+			const decodedToken = await this.jwtService.verifyAsync(token, {
+				secret: secretKey,
+			});
+
+			if (!decodedToken || !decodedToken.role || !Array.isArray(decodedToken.role)) {
+				return false; // Invalid or incomplete token
+			}
+
+			const isExpired = Date.now() >= decodedToken.exp * 1000;
+
+			if (isExpired) {
+				return false; // Token has expired
+			}
+
+			const lowercaseRoles = roles.map((role) => role.toLowerCase());
+			const userRoles = decodedToken.role.map((role) => role.toLowerCase());
+
+			return lowercaseRoles.some((role) => userRoles.includes(role));
+		} catch (error) {
+			console.error(error);
+			return false; // Token error
+		}
+	}
 }
