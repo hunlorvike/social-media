@@ -3,7 +3,6 @@ import { User } from './user.entity';
 
 @Entity('posts')
 @Index('idx_title', ['title'])
-
 export class Post {
   @PrimaryGeneratedColumn()
   id: number;

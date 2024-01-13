@@ -1,5 +1,6 @@
-import { Controller, Post, Body, Req, HttpStatus, HttpException, Get, Param, Put, Delete, Query, UsePipes, ValidationPipe } from '@nestjs/common';
+import { Controller, Post, Body, Req, HttpStatus, HttpException, Get, Param, Put, Delete, Query, UsePipes, ValidationPipe, UseInterceptors, UploadedFile } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { PostDTO } from 'src/dtos/post.dto';
 import { PostModel } from 'src/models/post.model';
 import { BaseResponse } from 'src/response/base.response';
@@ -19,17 +20,48 @@ export class PostController {
         return this.postService.findOne(id);
     }
 
+    // @Post()
+    // async create(@Body() postData: PostDTO, @Req() request): Promise<BaseResponse<number | boolean | PostModel | PostModel[]>> {
+    //     try {
+    //         const token = request.headers.authorization;
+
+    //         const secretKey = process.env.JWT_SECRET || "aLongSecretStringWhoseBitnessIsEqualToOrGreaterThanTheBitnessOfTheTokenEncryptionAlgorithm";
+
+    //         const decodedToken = await this.jwtService.verifyAsync(token, {
+    //             secret: secretKey,
+    //         });
+
+    //         if (!decodedToken || !decodedToken.sub) {
+    //             return BaseResponse.error<number | boolean | PostModel | PostModel[]>(
+    //                 HttpStatus.UNAUTHORIZED,
+    //                 'Invalid or incomplete token',
+    //                 'Unauthorized',
+    //             );
+    //         }
+    //         const authorId = decodedToken.sub;
+    //         postData.authorId = authorId;
+
+    //         // Dữ liệu từ form-data đã được xử lý ở đây
+    //         console.log(postData);
+
+    //         return this.postService.create(postData);
+    //     } catch (error) {
+    //         console.log(error);
+    //         if (error.name === 'TokenExpiredError') {
+    //             throw new HttpException('Token has expired', HttpStatus.UNAUTHORIZED);
+    //         }
+
+    //         throw new HttpException('Error creating post', HttpStatus.INTERNAL_SERVER_ERROR);
+    //     }
+    // }
+
     @Post()
-    @UsePipes(new ValidationPipe())
-    async create(@Body() postData: PostDTO, @Req() request): Promise<BaseResponse<number | boolean | PostModel | PostModel[]>> {
+    @UseInterceptors(FileInterceptor('file'))
+    async create(@UploadedFile() file, @Req() request: any): Promise<BaseResponse<number | boolean | PostModel | PostModel[]>> {
         try {
             const token = request.headers.authorization;
-
             const secretKey = process.env.JWT_SECRET || "aLongSecretStringWhoseBitnessIsEqualToOrGreaterThanTheBitnessOfTheTokenEncryptionAlgorithm";
-
-            const decodedToken = await this.jwtService.verifyAsync(token, {
-                secret: secretKey,
-            });
+            const decodedToken = await this.jwtService.verifyAsync(token, { secret: secretKey });
 
             if (!decodedToken || !decodedToken.sub) {
                 return BaseResponse.error<number | boolean | PostModel | PostModel[]>(
@@ -39,9 +71,14 @@ export class PostController {
                 );
             }
             const authorId = decodedToken.sub;
-            postData.authorId = authorId;
 
-            // Dữ liệu từ form-data đã được xử lý ở đây
+            // Get the title and content from the form data
+            const title = request.body.title;
+            const content = request.body.content;
+
+            const postData = { title, content, authorId };
+
+            // Form data has been processed here
             console.log(postData);
 
             return this.postService.create(postData);
@@ -56,15 +93,12 @@ export class PostController {
     }
 
     @Put(':id')
-    async update(@Param('id') id: number, @Body() postData: PostDTO, @Req() request): Promise<BaseResponse<PostModel>> {
+    @UseInterceptors(FileInterceptor('file'))
+    async update(@Param('id') id: number, @UploadedFile() file, @Req() request): Promise<BaseResponse<PostModel>> {
         try {
             const token = request.headers.authorization;
-
             const secretKey = process.env.JWT_SECRET || "aLongSecretStringWhoseBitnessIsEqualToOrGreaterThanTheBitnessOfTheTokenEncryptionAlgorithm";
-
-            const decodedToken = await this.jwtService.verifyAsync(token, {
-                secret: secretKey,
-            });
+            const decodedToken = await this.jwtService.verifyAsync(token, { secret: secretKey });
 
             if (!decodedToken || !decodedToken.sub) {
                 return BaseResponse.error<PostModel>(
@@ -73,9 +107,13 @@ export class PostController {
                     'Unauthorized',
                 );
             }
-
             const authorId = decodedToken.sub;
-            postData.authorId = authorId;
+
+            // Get the title and content from the form data
+            const title = request.body.title;
+            const content = request.body.content;
+
+            const postData = { title, content, authorId };
 
             return this.postService.update(id, postData);
         } catch (error) {
