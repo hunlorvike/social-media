@@ -22,47 +22,37 @@ export class UserService implements CrudService<User, UserModel, UserDTO> {
 
     async create(data: UserDTO): Promise<BaseResponse<UserModel>> {
         try {
-            // Convert from DTO to Entity
-            const newUser = this.dtoToEntity(data);
+            const newUser = await this.dtoToEntity(data);
 
-            // Validate the Entity
             await validateOrReject(newUser);
 
             const roleName = 'User';
 
-            // Find or create the role
             let userRole = await this.roleRepository.findOne({ where: { roleName } });
 
             if (!userRole) {
-                // If role doesn't exist, create and save it
                 userRole = await this.roleRepository.create({ roleName });
                 userRole = await this.roleRepository.save(userRole);
             }
 
-            // Assign role to the user
             newUser.roles = [userRole];
 
-            // Save the user to the database
             const savedUser = await this.userRepository.save(newUser);
 
-            // Manually synchronize the users_roles table
             await this.userRepository
                 .createQueryBuilder()
                 .relation(User, "roles")
                 .of(savedUser)
                 .add(userRole);
 
-            return BaseResponse.success<UserModel>('User created successfully', this.entityToModel(savedUser));
+            return await BaseResponse.success<UserModel>('User created successfully', await this.entityToModel(savedUser));
         } catch (error) {
             console.error('Error creating user:', error);
             if (error instanceof HttpException) {
-                // Xử lý các HttpException
                 return BaseResponse.error<UserModel>(error.getStatus(), error.message, 'Internal Server Error');
             } else if (error.code === '23505') {
-                // Xử lý trường hợp trùng lặp (unique constraint violation)
                 return BaseResponse.error<UserModel>(HttpStatus.CONFLICT, 'User with this email or phone already exists', 'Internal Server Error');
             } else {
-                // Xử lý các loại exception khác
                 return BaseResponse.error<UserModel>(HttpStatus.INTERNAL_SERVER_ERROR, 'Could not create user', 'Internal Server Error');
             }
         }
@@ -70,12 +60,9 @@ export class UserService implements CrudService<User, UserModel, UserDTO> {
 
     async findAll(): Promise<BaseResponse<UserModel[]>> {
         try {
-            const users = await this.userRepository
-                .createQueryBuilder('user')
-                .leftJoinAndSelect('user.roles', 'roles')
-                .getMany();
+            const users = await this.userRepository.find({ relations: ['roles'] });
 
-            const userModels = users.map((user) => this.entityToModel(user));
+            const userModels = await Promise.all(users.map(async (user) => await this.entityToModel(user)));
 
             return BaseResponse.success<UserModel[]>('Users retrieved successfully', userModels);
         } catch (error) {
@@ -101,7 +88,7 @@ export class UserService implements CrudService<User, UserModel, UserDTO> {
                 throw new HttpException(`User with id ${id} not found`, HttpStatus.NOT_FOUND);
             }
 
-            return BaseResponse.success<UserModel>('User retrieved successfully', this.entityToModel(user));
+            return await BaseResponse.success<UserModel>('User retrieved successfully', await this.entityToModel(user));
         } catch (error) {
             console.error('Error retrieving user:', error);
             return BaseResponse.error<UserModel>(
@@ -123,7 +110,9 @@ export class UserService implements CrudService<User, UserModel, UserDTO> {
 
             await this.userRepository.update(id, data);
 
-            return BaseResponse.success<UserModel>('User updated successfully', this.entityToModel(updatedUser));
+            const updatedUserModel = await this.entityToModel(updatedUser);
+
+            return BaseResponse.success<UserModel>('User updated successfully', updatedUserModel);
         } catch (error) {
             console.error('Error updating user:', error);
             if (error instanceof HttpException) {
@@ -159,7 +148,7 @@ export class UserService implements CrudService<User, UserModel, UserDTO> {
     async find(criteria: Record<string, any>): Promise<BaseResponse<UserModel[]>> {
         try {
             const users = await this.userRepository.find(criteria);
-            const userModels = users.map((user) => this.entityToModel(user));
+            const userModels = await Promise.all(users.map(async (user) => await this.entityToModel(user)));
             return BaseResponse.success<UserModel[]>('Users found successfully', userModels);
         } catch (error) {
             console.error('Error finding users:', error);
@@ -170,6 +159,7 @@ export class UserService implements CrudService<User, UserModel, UserDTO> {
             );
         }
     }
+
 
     async count(criteria: Record<string, any>): Promise<BaseResponse<number>> {
         try {
@@ -185,12 +175,12 @@ export class UserService implements CrudService<User, UserModel, UserDTO> {
         }
     }
 
-    entityToModel(entity: User): UserModel {
+    async entityToModel(entity: User): Promise<UserModel> {
         const { id, fullName, gender, email, phone, password, refreshToken, createdAt, updatedAt, roles } = entity;
         return new UserModel(id, fullName, gender, email, phone, password, refreshToken, createdAt, updatedAt, roles);
     }
 
-    dtoToEntity(dto: UserDTO): User {
+    async dtoToEntity(dto: UserDTO): Promise<User> {
         const user = new User();
         user.fullName = dto.fullName;
         user.gender = dto.gender;
@@ -201,4 +191,5 @@ export class UserService implements CrudService<User, UserModel, UserDTO> {
 
         return user;
     }
+
 }

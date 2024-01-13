@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsString } from 'class-validator';
+import { IsNotEmpty, IsString, IsNumber } from 'class-validator';
 
 export class PostDTO {
     @IsNotEmpty({ message: 'Title cannot be empty' })
@@ -8,4 +8,6 @@ export class PostDTO {
     @IsNotEmpty()
     @IsString()
     content: string;
+
+    authorId: number;
 }

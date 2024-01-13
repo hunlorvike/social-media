@@ -28,11 +28,11 @@ export class RoleService implements CrudService<Role, RoleModel, RoleDTO> {
                 );
             }
 
-            const roleEntity = this.dtoToEntity(data);
+            const roleEntity = await this.dtoToEntity(data); // Add await here
 
             const newRole = await this.roleRepository.save(roleEntity);
 
-            return BaseResponse.success<RoleModel>('Role created successfully', this.entityToModel(newRole));
+            return BaseResponse.success<RoleModel>('Role created successfully', await this.entityToModel(newRole)); // Add await here
         } catch (error) {
             console.error('Error creating role:', error);
             return BaseResponse.error<RoleModel>(
@@ -46,7 +46,9 @@ export class RoleService implements CrudService<Role, RoleModel, RoleDTO> {
     async findAll(): Promise<BaseResponse<RoleModel[]>> {
         try {
             const roles = await this.roleRepository.find();
-            const roleModels = roles.map((role) => this.entityToModel(role));
+
+            const roleModels = await Promise.all(roles.map((role) => this.entityToModel(role)));
+
             return BaseResponse.success<RoleModel[]>('Roles retrieved successfully', roleModels);
         } catch (error) {
             console.error('Error retrieving roles:', error);
@@ -68,7 +70,7 @@ export class RoleService implements CrudService<Role, RoleModel, RoleDTO> {
                     'Internal Server Error',
                 );
             }
-            return BaseResponse.success<RoleModel>('Role retrieved successfully', this.entityToModel(role));
+            return BaseResponse.success<RoleModel>('Role retrieved successfully', await this.entityToModel(role)); // Add await here
         } catch (error) {
             console.error('Error retrieving role:', error);
             return BaseResponse.error<RoleModel>(
@@ -93,7 +95,7 @@ export class RoleService implements CrudService<Role, RoleModel, RoleDTO> {
 
             await this.roleRepository.update(id, data);
 
-            return BaseResponse.success<RoleModel>('Role updated successfully', this.entityToModel(updatedRole));
+            return BaseResponse.success<RoleModel>('Role updated successfully', await this.entityToModel(updatedRole)); // Add await here
         } catch (error) {
             console.error('Error updating role:', error);
             return BaseResponse.error<RoleModel>(
@@ -103,6 +105,7 @@ export class RoleService implements CrudService<Role, RoleModel, RoleDTO> {
             );
         }
     }
+
 
     async remove(id: number): Promise<BaseResponse<boolean>> {
         try {
@@ -132,7 +135,7 @@ export class RoleService implements CrudService<Role, RoleModel, RoleDTO> {
     async find(criteria: Record<string, any>): Promise<BaseResponse<RoleModel[]>> {
         try {
             const roles = await this.roleRepository.find(criteria);
-            const roleModels = roles.map((role) => this.entityToModel(role));
+            const roleModels = await Promise.all(roles.map((role) => this.entityToModel(role)));
             return BaseResponse.success<RoleModel[]>('Roles found successfully', roleModels);
         } catch (error) {
             console.error('Error finding roles:', error);
@@ -158,11 +161,11 @@ export class RoleService implements CrudService<Role, RoleModel, RoleDTO> {
         }
     }
 
-    entityToModel(entity: Role): RoleModel {
+    async entityToModel(entity: Role): Promise<RoleModel> {
         return new RoleModel(entity.id, entity.roleName);
     }
 
-    dtoToEntity(dto: RoleDTO): Role {
+    async dtoToEntity(dto: RoleDTO): Promise<Role> {
         const role = new Role();
         role.roleName = dto.roleName;
         return role;

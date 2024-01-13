@@ -1,12 +1,13 @@
-import { Injectable } from "@nestjs/common";
+import { HttpStatus, Injectable } from "@nestjs/common";
 import { PostDTO } from "src/dtos/post.dto";
 import { Post } from "src/entities/post.entity";
 import { PostModel } from "src/models/post.model";
 import { CrudService } from "./crud.service";
 import { BaseResponse } from "src/response/base.response";
 import { InjectRepository } from "@nestjs/typeorm";
-import { Repository } from 'typeorm';
+import { FindOneOptions, Repository } from 'typeorm';
 import { User } from "src/entities/user.entity";
+import { validateOrReject } from "class-validator";
 
 @Injectable()
 export class PostService implements CrudService<Post, PostModel, PostDTO>{
@@ -17,32 +18,191 @@ export class PostService implements CrudService<Post, PostModel, PostDTO>{
         private readonly userRepository: Repository<User>,
     ) { }
 
-    create(data: PostDTO): Promise<BaseResponse<number | boolean | PostModel | PostModel[]>> {
-        throw new Error("Method not implemented.");
+
+    async create(data: PostDTO): Promise<BaseResponse<number | boolean | PostModel | PostModel[]>> {
+        try {
+            const newPost = await this.dtoToEntity(data);
+
+            await validateOrReject(newPost);
+
+            const createdPost = await this.postRepository.save(newPost);
+
+            return BaseResponse.success<PostModel>('Post created successfully', await this.entityToModel(createdPost));
+        } catch (error) {
+            console.error('Error creating post:', error);
+            return BaseResponse.error<PostModel>(
+                HttpStatus.INTERNAL_SERVER_ERROR,
+                'Could not create post',
+                'Internal Server Error',
+            );
+        }
     }
-    findAll(): Promise<BaseResponse<number | boolean | PostModel | PostModel[]>> {
-        throw new Error("Method not implemented.");
+
+    async findAll(): Promise<BaseResponse<PostModel[]>> {
+        try {
+            const posts = await this.postRepository.find();
+            const postModels = await Promise.all(posts.map(post => this.entityToModel(post)));
+            return BaseResponse.success<PostModel[]>('Posts retrieved successfully', postModels);
+        } catch (error) {
+            console.error('Error retrieving posts:', error);
+            return BaseResponse.error<PostModel[]>(
+                HttpStatus.INTERNAL_SERVER_ERROR,
+                'Could not retrieve posts',
+                'Internal Server Error',
+            );
+        }
     }
-    findOne(id: number): Promise<BaseResponse<number | boolean | PostModel | PostModel[]>> {
-        throw new Error("Method not implemented.");
+
+    async findOne(id: number): Promise<BaseResponse<PostModel>> {
+        try {
+            const post = await this.postRepository.findOne({ where: { id } });
+            if (!post) {
+                return BaseResponse.error<PostModel>(
+                    HttpStatus.NOT_FOUND,
+                    `Post with id ${id} not found`,
+                    'Internal Server Error',
+                );
+            }
+            return BaseResponse.success<PostModel>('Post retrieved successfully', await this.entityToModel(post));
+        } catch (error) {
+            console.error('Error retrieving post:', error);
+            return BaseResponse.error<PostModel>(
+                HttpStatus.INTERNAL_SERVER_ERROR,
+                'Could not retrieve post',
+                'Internal Server Error',
+            );
+        }
     }
-    update(id: number, data: PostDTO): Promise<BaseResponse<number | boolean | PostModel | PostModel[]>> {
-        throw new Error("Method not implemented.");
+    async update(id: number, data: PostDTO): Promise<BaseResponse<PostModel>> {
+        try {
+            const updatedPost = await this.postRepository.findOne({ where: { id } });
+
+            if (!updatedPost) {
+                return BaseResponse.error<PostModel>(
+                    HttpStatus.NOT_FOUND,
+                    `Post with id ${id} not found`,
+                    'Internal Server Error',
+                );
+            }
+
+            await this.postRepository.update(id, data);
+
+            return BaseResponse.success<PostModel>('Post updated successfully', await this.entityToModel(updatedPost));
+        } catch (error) {
+            console.error('Error updating post:', error);
+            return BaseResponse.error<PostModel>(
+                HttpStatus.INTERNAL_SERVER_ERROR,
+                'Could not update post',
+                'Internal Server Error',
+            );
+        }
     }
-    remove(id: number): Promise<BaseResponse<number | boolean | PostModel | PostModel[]>> {
-        throw new Error("Method not implemented.");
+
+    async removeByAuthor(id: number, userId: number): Promise<BaseResponse<boolean>> {
+        try {
+            const post = await this.postRepository.findOne({ where: { id } });
+
+            if (!post) {
+                return BaseResponse.error<boolean>(
+                    HttpStatus.NOT_FOUND,
+                    `Post with id ${id} not found`,
+                    'Internal Server Error',
+                );
+            }
+
+            if (post.author.id !== userId) {
+                return BaseResponse.error<boolean>(
+                    HttpStatus.FORBIDDEN,
+                    'You are not authorized to remove this post',
+                    'Forbidden',
+                );
+            }
+
+            await this.postRepository.remove(post);
+
+            return BaseResponse.success<boolean>('Post removed successfully', true);
+        } catch (error) {
+            console.error('Error removing post:', error);
+            return BaseResponse.error<boolean>(
+                HttpStatus.INTERNAL_SERVER_ERROR,
+                'Could not remove post',
+                'Internal Server Error',
+            );
+        }
     }
-    find(criteria: Record<string, any>): Promise<BaseResponse<number | boolean | PostModel | PostModel[]>> {
-        throw new Error("Method not implemented.");
+
+
+    async remove(id: number): Promise<BaseResponse<boolean>> {
+        try {
+            const post = await this.postRepository.findOne({ where: { id } });
+
+            if (!post) {
+                return BaseResponse.error<boolean>(
+                    HttpStatus.NOT_FOUND,
+                    `Post with id ${id} not found`,
+                    'Internal Server Error',
+                );
+            }
+
+            await this.postRepository.remove(post);
+
+            return BaseResponse.success<boolean>('Post removed successfully', true);
+        } catch (error) {
+            console.error('Error removing post:', error);
+            return BaseResponse.error<boolean>(
+                HttpStatus.INTERNAL_SERVER_ERROR,
+                'Could not remove post',
+                'Internal Server Error',
+            );
+        }
     }
-    count(criteria: Record<string, any>): Promise<BaseResponse<number | boolean | PostModel | PostModel[]>> {
-        throw new Error("Method not implemented.");
+
+    async find(criteria: Record<string, any>): Promise<BaseResponse<PostModel[]>> {
+        try {
+            const posts = await this.postRepository.find(criteria);
+            const postModels = await Promise.all(posts.map(post => this.entityToModel(post)));
+            return BaseResponse.success<PostModel[]>('Posts found successfully', postModels);
+        } catch (error) {
+            console.error('Error finding posts:', error);
+            return BaseResponse.error<PostModel[]>(
+                HttpStatus.INTERNAL_SERVER_ERROR,
+                'Could not find posts',
+                'Internal Server Error',
+            );
+        }
     }
-    entityToModel(entity: Post): PostModel {
-        throw new Error("Method not implemented.");
+
+    async count(criteria: Record<string, any>): Promise<BaseResponse<number>> {
+        try {
+            const count = await this.postRepository.count(criteria);
+            return BaseResponse.success<number>('Posts counted successfully', count);
+        } catch (error) {
+            console.error('Error counting posts:', error);
+            return BaseResponse.error<number>(
+                HttpStatus.INTERNAL_SERVER_ERROR,
+                'Could not count posts',
+                'Internal Server Error',
+            );
+        }
     }
-    dtoToEntity(dto: PostDTO): Post {
-        throw new Error("Method not implemented.");
+
+    async entityToModel(entity: Post): Promise<PostModel> {
+        return new PostModel(entity.id, entity.title, entity.content, entity.createdAt, entity.updatedAt);
+    }
+
+    async dtoToEntity(dto: PostDTO): Promise<Post> {
+        const user = await this.userRepository.findOne({ where: { id: dto.authorId } });
+
+        if (!user) {
+            throw new Error('User not found');
+        }
+
+        const post = new Post();
+        post.title = dto.title;
+        post.content = dto.content;
+        post.author = user;
+
+        return post;
     }
 
 }

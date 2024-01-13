@@ -11,6 +11,6 @@ export interface CrudService<Entity, Model, DTO, Response = BaseResponse<Model |
     find(criteria: Record<string, any>): Promise<Response>;
     count(criteria: Record<string, any>): Promise<Response>;
 
-    entityToModel(entity: Entity): Model;
-    dtoToEntity(dto: DTO): Entity;
+    entityToModel(entity: Entity): Promise<Model>;
+    dtoToEntity(dto: DTO): Promise<Entity>;
 }

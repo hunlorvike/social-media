@@ -6,6 +6,7 @@ import { PostRepository } from 'src/repositories/post.repository';
 import { UserModule } from './user.module';
 import { PostService } from 'src/services/post.service';
 import { RoleModule } from './role.module';
+import { JwtModule, JwtService } from '@nestjs/jwt';
 
 @Module({
     imports: [
@@ -14,7 +15,7 @@ import { RoleModule } from './role.module';
         forwardRef(() => RoleModule),
     ],
     controllers: [PostController],
-    providers: [PostService, PostRepository],
+    providers: [PostService, PostRepository, JwtService],
     exports: [PostService, TypeOrmModule],
 })
 export class PostModule { }
