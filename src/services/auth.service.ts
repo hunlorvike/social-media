@@ -9,6 +9,7 @@ import { JwtService } from '@nestjs/jwt';
 import { RegisterDTO } from 'src/dtos/register.dto';
 import { LoginDTO } from 'src/dtos/login.dto';
 import { JWT_CONFIG } from 'src/configs/jwt.config';
+import { randomBytes } from 'crypto';
 
 
 @Injectable()
@@ -48,13 +49,23 @@ export class AuthService {
 
             newUser.roles = [userRole];
 
+            // Generate Refresh Token
+            const refreshToken = await this.generateRefreshToken(registerDTO.email);
+
+            // Save Refresh Token to the database
+            newUser.refreshToken = refreshToken.refreshToken;
+
             // Save the user to the database
-            return this.userRepository.save(newUser);
+            await this.userRepository.save(newUser);
+
+            return newUser;
+
         } catch (error) {
             // Handle registration errors
             throw new ConflictException('Could not register user');
         }
     }
+
 
     async login(LoginDTO: LoginDTO): Promise<{ accessToken: string }> {
         const { email, password } = LoginDTO;
@@ -101,6 +112,16 @@ export class AuthService {
             throw new NotFoundException('Could not change password');
         }
     }
+
+    async generateRefreshToken(userEmail: string): Promise<{ refreshToken: string }> {
+        const refreshToken = await this.jwtService.signAsync({ sub: userEmail }, {
+            expiresIn: process.env.JWT_REFRESH_TOKEN_TTL || '30d', // Thời gian sống của Refresh Token
+            secret: process.env.JWT_REFRESH_TOKEN_SECRET || 'anotherSecretKey',
+        });
+
+        return { refreshToken };
+    }
+
 
     // Generate Token
     async generateAccessToken(user: Partial<User>): Promise<{ accessToken: string }> {

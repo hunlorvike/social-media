@@ -58,7 +58,7 @@ export class PostController {
 
     @Put(':id')
     @UseInterceptors(FileInterceptor('file'))
-    async update(@Param('id') id: number, @UploadedFile() file, @Req() request): Promise<BaseResponse<PostModel>> {
+    async update(@Param('id') id: number, @UploadedFile() file, @Req() request: any): Promise<BaseResponse<PostModel>> {
         try {
             const token = request.headers.authorization;
             const secretKey = process.env.JWT_SECRET || "aLongSecretStringWhoseBitnessIsEqualToOrGreaterThanTheBitnessOfTheTokenEncryptionAlgorithm";

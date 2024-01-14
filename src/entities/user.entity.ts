@@ -5,7 +5,7 @@ import { Post } from "./post.entity";
 
 @Entity("users")
 @Index("idx_email", ["email"], { unique: true })
-@Index("idx_phone", ["phone"], { unique: true })
+@Index("idx_phone", ["phone"])
 export class User {
     @PrimaryGeneratedColumn()
     id: number;
@@ -23,7 +23,7 @@ export class User {
     @Column({ length: 255, unique: true })
     email: string;
 
-    @Column({ length: 20, unique: true })
+    @Column({ length: 20 })
     phone: string;
 
     @Column({ length: 255 })

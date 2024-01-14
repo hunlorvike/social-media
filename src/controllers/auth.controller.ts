@@ -1,4 +1,4 @@
-import { Controller, Post, Body, HttpCode, HttpStatus } from '@nestjs/common';
+import { Controller, Post, Body, HttpCode, HttpStatus, ConflictException } from '@nestjs/common';
 import { LoginDTO } from 'src/dtos/login.dto';
 import { RegisterDTO } from 'src/dtos/register.dto';
 import { User } from 'src/entities/user.entity';
@@ -8,16 +8,6 @@ import { AuthService } from 'src/services/auth.service';
 @Controller('auth')
 export class AuthController {
     constructor(private readonly authService: AuthService) { }
-
-    @Post('register')
-    async register(@Body() registerDTO: RegisterDTO): Promise<BaseResponse<User>> {
-        try {
-            const user = await this.authService.register(registerDTO);
-            return BaseResponse.success('Registration successful', user);
-        } catch (error) {
-            return BaseResponse.error<User>(HttpStatus.INTERNAL_SERVER_ERROR, 'Registration failed', error.message || 'Unknown error occurred');
-        }
-    }
 
     @Post('login')
     @HttpCode(200)
@@ -29,4 +19,20 @@ export class AuthController {
             return BaseResponse.error<{ accessToken: string }>(HttpStatus.UNAUTHORIZED, 'Login failed', error.message || 'Unknown error occurred');
         }
     }
+
+    @Post('register')
+    async register(@Body() registerDTO: RegisterDTO): Promise<BaseResponse<User>> {
+        try {
+            const user = await this.authService.register(registerDTO);
+            return BaseResponse.success('Registration successful', user);
+        } catch (error) {
+            if (error instanceof ConflictException) {
+                return BaseResponse.error<User>(HttpStatus.CONFLICT, 'Registration failed', error.message);
+            } else {
+                return BaseResponse.error<User>(HttpStatus.INTERNAL_SERVER_ERROR, 'Registration failed', error.message || 'Unknown error occurred');
+            }
+        }
+    }
+
+
 }

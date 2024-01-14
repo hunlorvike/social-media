@@ -73,10 +73,14 @@ export class PostService implements CrudService<Post, PostModel, PostDTO>{
             );
         }
     }
+
     async update(id: number, data: PostDTO): Promise<BaseResponse<PostModel>> {
         try {
-            const updatedPost = await this.postRepository.findOne({ where: { id } });
-
+            const updatedPost = await this.postRepository.findOne({
+                where: { id },
+                relations: ['author'],
+            });
+            
             if (!updatedPost) {
                 return BaseResponse.error<PostModel>(
                     HttpStatus.NOT_FOUND,
@@ -84,11 +88,32 @@ export class PostService implements CrudService<Post, PostModel, PostDTO>{
                     'Internal Server Error',
                 );
             }
-
-            await this.postRepository.update(id, data);
-
-            return BaseResponse.success<PostModel>('Post updated successfully', await this.entityToModel(updatedPost));
-        } catch (error) {
+                        
+            // Check if authorId in the data is different from the authorId in the database
+            if (data.authorId && data.authorId !== updatedPost.author.id) {
+                // If different, return an error (or handle the conflict as needed)
+                return BaseResponse.error<PostModel>(
+                    HttpStatus.BAD_REQUEST,
+                    'Cannot update authorId',
+                    'Invalid Request',
+                );
+            }
+    
+            // Exclude 'authorId' from the update data
+            const { authorId, ...updateData } = data;
+    
+            // Update only if there are fields to update
+            if (Object.keys(updateData).length > 0) {
+                const updatedPostEntity = await this.postRepository.save({
+                    ...updatedPost,
+                    ...updateData,
+                });
+    
+                return BaseResponse.success<PostModel>('Post updated successfully', await this.entityToModel(updatedPostEntity));
+                }
+    
+                return BaseResponse.success<PostModel>('No fields to update', await this.entityToModel(updatedPost));
+            } catch (error) {
             console.error('Error updating post:', error);
             return BaseResponse.error<PostModel>(
                 HttpStatus.INTERNAL_SERVER_ERROR,
@@ -97,7 +122,7 @@ export class PostService implements CrudService<Post, PostModel, PostDTO>{
             );
         }
     }
-
+    
     async removeByAuthor(id: number, userId: number): Promise<BaseResponse<boolean>> {
         try {
             const post = await this.postRepository.findOne({ where: { id } });
