@@ -8,9 +8,9 @@ import { InjectRepository } from "@nestjs/typeorm";
 import { FindOneOptions, Repository } from 'typeorm';
 import { User } from "src/entities/user.entity";
 import { validateOrReject } from "class-validator";
-
+import * as ExcelJS from 'exceljs';
 @Injectable()
-export class PostService implements CrudService<Post, PostModel, PostDTO>{
+export class PostService implements CrudService<Post, PostModel, PostDTO> {
     constructor(
         @InjectRepository(Post)
         private readonly postRepository: Repository<Post>,
@@ -53,6 +53,35 @@ export class PostService implements CrudService<Post, PostModel, PostDTO>{
         }
     }
 
+
+    // Add this method to your PostService
+    async findAllByAuthor(authorId: number): Promise<BaseResponse<PostModel[]>> {
+        try {
+            const posts = await this.postRepository.find({
+                where: { author: { id: authorId } },
+            });
+
+            if (!posts || posts.length === 0) {
+                return BaseResponse.error<PostModel[]>(
+                    HttpStatus.NOT_FOUND,
+                    `No posts found for author with id ${authorId}`,
+                    'Not Found',
+                );
+            }
+
+            const postModels = await Promise.all(posts.map(post => this.entityToModel(post)));
+            return BaseResponse.success<PostModel[]>('Posts retrieved successfully', postModels);
+        } catch (error) {
+            console.error('Error retrieving posts by author:', error);
+            return BaseResponse.error<PostModel[]>(
+                HttpStatus.INTERNAL_SERVER_ERROR,
+                'Could not retrieve posts by author',
+                'Internal Server Error',
+            );
+        }
+    }
+
+
     async findOne(id: number): Promise<BaseResponse<PostModel>> {
         try {
             const post = await this.postRepository.findOne({ where: { id } });
@@ -80,7 +109,7 @@ export class PostService implements CrudService<Post, PostModel, PostDTO>{
                 where: { id },
                 relations: ['author'],
             });
-            
+
             if (!updatedPost) {
                 return BaseResponse.error<PostModel>(
                     HttpStatus.NOT_FOUND,
@@ -88,7 +117,7 @@ export class PostService implements CrudService<Post, PostModel, PostDTO>{
                     'Internal Server Error',
                 );
             }
-                        
+
             // Check if authorId in the data is different from the authorId in the database
             if (data.authorId && data.authorId !== updatedPost.author.id) {
                 // If different, return an error (or handle the conflict as needed)
@@ -98,22 +127,22 @@ export class PostService implements CrudService<Post, PostModel, PostDTO>{
                     'Invalid Request',
                 );
             }
-    
+
             // Exclude 'authorId' from the update data
             const { authorId, ...updateData } = data;
-    
+
             // Update only if there are fields to update
             if (Object.keys(updateData).length > 0) {
                 const updatedPostEntity = await this.postRepository.save({
                     ...updatedPost,
                     ...updateData,
                 });
-    
+
                 return BaseResponse.success<PostModel>('Post updated successfully', await this.entityToModel(updatedPostEntity));
-                }
-    
-                return BaseResponse.success<PostModel>('No fields to update', await this.entityToModel(updatedPost));
-            } catch (error) {
+            }
+
+            return BaseResponse.success<PostModel>('No fields to update', await this.entityToModel(updatedPost));
+        } catch (error) {
             console.error('Error updating post:', error);
             return BaseResponse.error<PostModel>(
                 HttpStatus.INTERNAL_SERVER_ERROR,
@@ -122,7 +151,7 @@ export class PostService implements CrudService<Post, PostModel, PostDTO>{
             );
         }
     }
-    
+
     async removeByAuthor(id: number, userId: number): Promise<BaseResponse<boolean>> {
         try {
             const post = await this.postRepository.findOne({ where: { id } });
@@ -210,6 +239,51 @@ export class PostService implements CrudService<Post, PostModel, PostDTO>{
             );
         }
     }
+
+    async exportToExcel(filename: string): Promise<BaseResponse<string>> {
+        try {
+            const posts = await this.postRepository.find();
+            const workbook = new ExcelJS.Workbook();
+            const worksheet = workbook.addWorksheet('Posts');
+
+            // Define columns
+            const columns = [
+                { header: 'ID', key: 'id', width: 10 },
+                { header: 'Title', key: 'title', width: 30 },
+                { header: 'Content', key: 'content', width: 50 },
+                { header: 'CreatedAt', key: 'createdAt', width: 20 },
+                { header: 'UpdatedAt', key: 'updatedAt', width: 20 },
+            ];
+
+            // Add columns to the worksheet
+            worksheet.columns = columns;
+
+            // Add data to the worksheet
+            posts.forEach(post => {
+                worksheet.addRow({
+                    id: post.id,
+                    title: post.title,
+                    content: post.content,
+                    createdAt: post.createdAt,
+                    updatedAt: post.updatedAt,
+                });
+            });
+
+            // Save the Excel file
+            const filePath = `./exports/${filename}.xlsx`;
+            await workbook.xlsx.writeFile(filePath);
+
+            return BaseResponse.success<string>('Exported successfully', filePath);
+        } catch (error) {
+            console.error('Error exporting to Excel:', error);
+            return BaseResponse.error<string>(
+                HttpStatus.INTERNAL_SERVER_ERROR,
+                'Could not export to Excel',
+                'Internal Server Error',
+            );
+        }
+    }
+
 
     async entityToModel(entity: Post): Promise<PostModel> {
         return new PostModel(entity.id, entity.title, entity.content, entity.createdAt, entity.updatedAt);

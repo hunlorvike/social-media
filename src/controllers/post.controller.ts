@@ -20,6 +20,12 @@ export class PostController {
         return this.postService.findOne(id);
     }
 
+    @Get('author/:authorId')
+    async findAllByAuthor(@Param('authorId') authorId: number): Promise<BaseResponse<PostModel[]>> {
+      return this.postService.findAllByAuthor(authorId);
+    }
+  
+
     @Post()
     @UseInterceptors(FileInterceptor('file'))
     async create(@UploadedFile() file, @Req() request: any): Promise<BaseResponse<number | boolean | PostModel | PostModel[]>> {
@@ -116,6 +122,12 @@ export class PostController {
             throw new HttpException('Error removing post', HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
+
+    @Get('export-posts')
+    async exportPostsToExcel(@Query('filename') filename: string) {
+      return this.postService.exportToExcel(filename);
+    }
+  
 
     @Get('find')
     async find(@Query() query: Record<string, any>): Promise<BaseResponse<PostModel[]>> {
