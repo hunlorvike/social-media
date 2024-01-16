@@ -1,5 +1,7 @@
 // src/main.ts
 import { NestFactory } from '@nestjs/core';
+import { NestExpressApplication } from '@nestjs/platform-express';
+import { join } from 'path';
 import { AppModule } from './app.module';
 import * as dotenv from 'dotenv';
 import { CorsOptions } from '@nestjs/common/interfaces/external/cors-options.interface';
@@ -13,7 +15,7 @@ async function bootstrap() {
   const port = process.env.PORT || 3000;
   console.log(`Application is running on: http://localhost:${port}`);
 
-  // Enable CORS
+  // Cấu hình CORS
   const corsOptions: CorsOptions = {
     origin: '*',
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
@@ -21,6 +23,7 @@ async function bootstrap() {
 
   app.enableCors(corsOptions);
 
+  // Cấu hình Swagger
   const config = new DocumentBuilder()
     .setTitle('Social media')
     .setDescription('Nguyễn Việt Hưng')
@@ -31,6 +34,7 @@ async function bootstrap() {
   SwaggerModule.setup('swagger', app, document);
 
   await app.listen(port);
+
 }
 
 bootstrap();

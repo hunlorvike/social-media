@@ -10,48 +10,64 @@ import { JwtStrategy } from './configs/strategy/jwt.strategy';
 import { JwtService } from '@nestjs/jwt';
 import { JWT_CONFIG } from './configs/jwt.config';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
-
+import { ServeStaticModule } from '@nestjs/serve-static';
+import { join } from 'path';
 
 @Module({
-  imports: [
-    PostModule,
-    TypeOrmModule.forRoot({
-      type: 'mysql',
-      host: 'localhost',
-      port: 3306,
-      username: 'root',
-      password: '',
-      database: 'nestjs_social',
-      entities: [
-        __dirname + '/**/*.entity{.ts,.js}',
-      ],
-      logging: true,
-      migrations: [__dirname + 'migrations', '*.{ts,js}'],
-      migrationsRun: true,
-      synchronize: true,
-    }),
-    ConfigModule.forRoot(),
-    AuthModule,
-    RoleModule,
-    UserModule,
-  ],
-  controllers: [TestController],
-  providers: [
-    JwtStrategy,
-    JwtService,
-    {
-      provide: JWT_CONFIG,
-      useValue: {
-        secret: process.env.JWT_SECRET || 'aLongSecretStringWhoseBitnessIsEqualToOrGreaterThanTheBitnessOfTheTokenEncryptionAlgorithm',
-        accessTokenTtl: process.env.JWT_ACCESS_TOKEN_TTL || '3600s',
-      },
-    }
-  ],
+    imports: [
+        PostModule,
+        // TypeOrmModule.forRoot({ // Mysql
+        //     type: 'mysql',
+        //     host: 'localhost',
+        //     port: 3306,
+        //     username: 'root',
+        //     password: '',
+        //     database: 'nestjs_social',
+        //     entities: [__dirname + '/**/*.entity{.ts,.js}'],
+        //     logging: true,
+        //     migrations: [__dirname + 'migrations', '*.{ts,js}'],
+        //     migrationsRun: true,
+        //     synchronize: true,
+        // }),
+        TypeOrmModule.forRoot({ // PostgreSQL
+            type: 'postgres',
+            host: 'localhost',
+            port: 5432,
+            username: 'postgres',
+            password: '123123123',
+            database: 'nestjs_social',
+            entities: [__dirname + '/**/*.entity{.ts,.js}'],
+            logging: true,
+            migrations: [__dirname + 'migrations', '*.{ts,js}'],
+            migrationsRun: true,
+            synchronize: true,
+        }),
+
+        ConfigModule.forRoot(),
+        AuthModule,
+        RoleModule,
+        UserModule,
+        ServeStaticModule.forRoot({
+            rootPath: join(__dirname, '..', 'public'), // Đường dẫn đến thư mục static
+        }),
+
+    ],
+    controllers: [TestController],
+    providers: [
+        JwtStrategy,
+        JwtService,
+        {
+            provide: JWT_CONFIG,
+            useValue: {
+                secret:
+                    process.env.JWT_SECRET ||
+                    'aLongSecretStringWhoseBitnessIsEqualToOrGreaterThanTheBitnessOfTheTokenEncryptionAlgorithm',
+                accessTokenTtl: process.env.JWT_ACCESS_TOKEN_TTL || '3600s',
+            },
+        },
+    ],
 })
-
-export class AppModule {
-}
-
+export class AppModule { }
 
 /*
 - Mọi thứ trong NestJS đều bắt đầu từ một module,
