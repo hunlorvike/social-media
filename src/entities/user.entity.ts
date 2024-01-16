@@ -10,32 +10,33 @@ export class User {
     @PrimaryGeneratedColumn()
     id: number;
 
-    @Column({ name: 'full_name', length: 255 })
+    @Column({ name: 'full_name', length: 255, nullable: true })
     fullName: string;
 
     @Column({
         type: 'enum',
         enum: Gender,
         default: Gender.NOT_GIVEN,
+        nullable: true
     })
     gender: Gender;
 
     @Column({ length: 255, unique: true })
     email: string;
 
-    @Column({ length: 20 })
+    @Column({ length: 20, nullable: true }) // Đặt giá trị nullable để cho phép giá trị null
     phone: string;
 
-    @Column({ length: 255 })
+    @Column({ length: 255, nullable: true })
     password: string;
 
-    @Column({ name: 'refresh_token', length: 255 })
+    @Column({ name: 'refresh_token', length: 255, nullable: true })
     refreshToken: string;
 
-    @Column({ name: 'created_at', type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
+    @Column({ name: 'created_at', type: 'timestamp', nullable: true, default: () => 'CURRENT_TIMESTAMP' })
     createdAt: Date;
 
-    @Column({ name: 'updated_at', type: 'timestamp', default: () => 'CURRENT_TIMESTAMP', onUpdate: 'CURRENT_TIMESTAMP' })
+    @Column({ name: 'updated_at', type: 'timestamp', nullable: true, default: () => 'CURRENT_TIMESTAMP', onUpdate: 'CURRENT_TIMESTAMP' })
     updatedAt: Date;
 
     @OneToMany(() => Post, post => post.author)

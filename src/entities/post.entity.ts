@@ -7,12 +7,12 @@ export class Post {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column({ length: 255 })
+  @Column({ length: 255, nullable: true })
   title: string;
 
-  @Column('text')
+  @Column({ type: 'text', nullable: true })
   content: string;
-
+  
   @ManyToOne(() => User, user => user.posts)
   @Index('idx_author')
   author: User;
