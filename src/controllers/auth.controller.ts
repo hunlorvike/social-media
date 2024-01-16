@@ -1,4 +1,5 @@
 import { Controller, Post, Body, HttpCode, HttpStatus, ConflictException } from '@nestjs/common';
+import { ApiTags } from '@nestjs/swagger';
 import { LoginDTO } from 'src/dtos/login.dto';
 import { RegisterDTO } from 'src/dtos/register.dto';
 import { User } from 'src/entities/user.entity';
@@ -6,6 +7,7 @@ import { BaseResponse } from 'src/response/base.response';
 import { AuthService } from 'src/services/auth.service';
 
 @Controller('auth')
+@ApiTags('Authentication')
 export class AuthController {
     constructor(private readonly authService: AuthService) { }
 

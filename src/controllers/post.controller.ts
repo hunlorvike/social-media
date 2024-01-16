@@ -1,12 +1,14 @@
 import { Controller, Post, Body, Req, HttpStatus, HttpException, Get, Param, Put, Delete, Query, UsePipes, ValidationPipe, UseInterceptors, UploadedFile } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { ApiTags } from '@nestjs/swagger';
 import { PostDTO } from 'src/dtos/post.dto';
 import { PostModel } from 'src/models/post.model';
 import { BaseResponse } from 'src/response/base.response';
 import { PostService } from 'src/services/post.service';
 
 @Controller('posts')
+@ApiTags('Post')
 export class PostController {
     constructor(private readonly postService: PostService, private readonly jwtService: JwtService,) { }
 

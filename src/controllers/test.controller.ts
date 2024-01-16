@@ -1,8 +1,10 @@
 import { Get, Controller, UseGuards } from '@nestjs/common';
+import { ApiTags } from '@nestjs/swagger';
 import { Roles } from 'src/configs/decorator/roles.decorator';
 import { RolesGuard } from 'src/configs/guards/roles.guard';
 
 @Controller('test')
+@ApiTags('Test')
 export class TestController {
 
     @Get('user')

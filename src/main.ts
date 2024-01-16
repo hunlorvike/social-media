@@ -3,6 +3,7 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import * as dotenv from 'dotenv';
 import { CorsOptions } from '@nestjs/common/interfaces/external/cors-options.interface';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
 dotenv.config();
 
@@ -19,6 +20,15 @@ async function bootstrap() {
   };
 
   app.enableCors(corsOptions);
+
+  const config = new DocumentBuilder()
+    .setTitle('Social media')
+    .setDescription('Nguyễn Việt Hưng')
+    .setVersion('1.0')
+    .addTag('Nestjs')
+    .build();
+  const document = SwaggerModule.createDocument(app, config);
+  SwaggerModule.setup('swagger', app, document);
 
   await app.listen(port);
 }

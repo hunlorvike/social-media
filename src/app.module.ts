@@ -9,6 +9,7 @@ import { TestController } from './controllers/test.controller';
 import { JwtStrategy } from './configs/strategy/jwt.strategy';
 import { JwtService } from '@nestjs/jwt';
 import { JWT_CONFIG } from './configs/jwt.config';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
 
 @Module({
@@ -32,7 +33,7 @@ import { JWT_CONFIG } from './configs/jwt.config';
     ConfigModule.forRoot(),
     AuthModule,
     RoleModule,
-    UserModule,  // Không cần gọi .forRoot() nếu UserModule không cung cấp
+    UserModule,
   ],
   controllers: [TestController],
   providers: [
@@ -47,7 +48,9 @@ import { JWT_CONFIG } from './configs/jwt.config';
     }
   ],
 })
-export class AppModule { }
+
+export class AppModule {
+}
 
 
 /*
