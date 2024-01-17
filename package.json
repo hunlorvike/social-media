@@ -17,7 +17,15 @@
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
-    "test:e2e": "jest --config ./test/jest-e2e.json"
+    "test:e2e": "jest --config ./test/jest-e2e.json",
+    "migrate:run": "npm run typeorm migration:run",
+    "migrate:show": "npx typeorm migration:show",
+    "migrate:generate": "npm run typeorm migration:generate",
+    "migrate:revert": "npm run typeorm migration:revert",
+    "migrate:revert-specific": "npm run typeorm migration:revert -- -n",
+    "migrate:generate:custom": "typeorm migration:generate -n $env:MIGRATION_NAME",
+    "migrate:revert:custom": "npm run typeorm migration:revert -- -n $MIGRATION_NAME",
+    "typeorm": "typeorm"
   },
   "dependencies": {
     "@nestjs/common": "^10.0.0",
@@ -37,6 +45,10 @@
     "dotenv": "^16.3.1",
     "exceljs": "^4.4.0",
     "hbs": "^4.2.0",
+    "imagemin": "^8.0.1",
+    "imagemin-webp": "^8.0.0",
+    "mime-types": "^2.1.35",
+    "mkdirp": "^3.0.1",
     "multer": "^1.4.5-lts.1",
     "mysql2": "^3.7.0",
     "nodemon": "^3.0.2",
@@ -45,8 +57,10 @@
     "pg": "^8.11.3",
     "reflect-metadata": "^0.1.13",
     "rxjs": "^7.8.1",
+    "sharp": "^0.33.2",
     "swagger-ui-express": "^5.0.0",
-    "typeorm": "^0.3.19"
+    "typeorm": "^0.3.19",
+    "uuid": "^9.0.1"
   },
   "devDependencies": {
     "@nestjs/cli": "^10.0.0",

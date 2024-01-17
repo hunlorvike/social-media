@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, Put, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Put, Delete, UsePipes, ValidationPipe, ParseIntPipe } from '@nestjs/common';
 import { RoleDTO } from 'src/dtos/role.dto';
 import { RoleModel } from 'src/models/role.model';
 import { RoleService } from 'src/services/role.service';
@@ -10,10 +10,6 @@ import { ApiTags } from '@nestjs/swagger';
 export class RoleController {
     constructor(private readonly roleService: RoleService) { }
 
-    @Post()
-    async create(@Body() roleDTO: RoleDTO): Promise<BaseResponse<RoleModel>> {
-        return this.roleService.create(roleDTO);
-    }
 
     @Get()
     async findAll(): Promise<BaseResponse<RoleModel[]>> {
@@ -21,17 +17,24 @@ export class RoleController {
     }
 
     @Get(':id')
-    async findOne(@Param('id') id: number): Promise<BaseResponse<RoleModel>> {
+    async findOne(@Param('id', ParseIntPipe) id: number): Promise<BaseResponse<RoleModel>> {
         return this.roleService.findOne(id);
     }
 
+    @Post()
+    @UsePipes(new ValidationPipe()) 
+    async create(@Body() roleDTO: RoleDTO): Promise<BaseResponse<RoleModel>> {
+        return this.roleService.create(roleDTO);
+    }
+
     @Put(':id')
-    async update(@Param('id') id: number, @Body() roleDTO: RoleDTO): Promise<BaseResponse<RoleModel>> {
+    @UsePipes(new ValidationPipe()) 
+    async update(@Param('id', ParseIntPipe) id: number, @Body() roleDTO: RoleDTO): Promise<BaseResponse<RoleModel>> {
         return this.roleService.update(id, roleDTO);
     }
 
     @Delete(':id')
-    async remove(@Param('id') id: number): Promise<BaseResponse<boolean>> {
+    async remove(@Param('id', ParseIntPipe) id: number): Promise<BaseResponse<boolean>> {
         return this.roleService.remove(id);
     }
 

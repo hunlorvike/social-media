@@ -1,14 +1,18 @@
-import { HttpStatus, Injectable } from "@nestjs/common";
-import { PostDTO } from "src/dtos/post.dto";
-import { Post } from "src/entities/post.entity";
-import { PostModel } from "src/models/post.model";
-import { CrudService } from "./crud.service";
-import { BaseResponse } from "src/response/base.response";
-import { InjectRepository } from "@nestjs/typeorm";
+import { HttpStatus, Injectable } from '@nestjs/common';
+import { PostDTO } from 'src/dtos/post.dto';
+import { Post } from 'src/entities/post.entity';
+import { PostModel } from 'src/models/post.model';
+import { CrudService } from './crud.service';
+import { BaseResponse } from 'src/response/base.response';
+import { InjectRepository } from '@nestjs/typeorm';
 import { FindOneOptions, Repository } from 'typeorm';
-import { User } from "src/entities/user.entity";
-import { validateOrReject } from "class-validator";
+import { User } from 'src/entities/user.entity';
+import { validateOrReject } from 'class-validator';
 import * as ExcelJS from 'exceljs';
+import { FileUtils } from 'src/utils/file.util';
+import path from 'path';
+import * as fs from 'fs';
+
 @Injectable()
 export class PostService implements CrudService<Post, PostModel, PostDTO> {
     constructor(
@@ -18,8 +22,9 @@ export class PostService implements CrudService<Post, PostModel, PostDTO> {
         private readonly userRepository: Repository<User>,
     ) { }
 
-
-    async create(data: PostDTO): Promise<BaseResponse<number | boolean | PostModel | PostModel[]>> {
+    async create(
+        data: PostDTO,
+    ): Promise<BaseResponse<number | boolean | PostModel | PostModel[]>> {
         try {
             const newPost = await this.dtoToEntity(data);
 
@@ -27,7 +32,10 @@ export class PostService implements CrudService<Post, PostModel, PostDTO> {
 
             const createdPost = await this.postRepository.save(newPost);
 
-            return BaseResponse.success<PostModel>('Post created successfully', await this.entityToModel(createdPost));
+            return BaseResponse.success<PostModel>(
+                'Post created successfully',
+                await this.entityToModel(createdPost),
+            );
         } catch (error) {
             console.error('Error creating post:', error);
             return BaseResponse.error<PostModel>(
@@ -41,8 +49,13 @@ export class PostService implements CrudService<Post, PostModel, PostDTO> {
     async findAll(): Promise<BaseResponse<PostModel[]>> {
         try {
             const posts = await this.postRepository.find();
-            const postModels = await Promise.all(posts.map(post => this.entityToModel(post)));
-            return BaseResponse.success<PostModel[]>('Posts retrieved successfully', postModels);
+            const postModels = await Promise.all(
+                posts.map((post) => this.entityToModel(post)),
+            );
+            return BaseResponse.success<PostModel[]>(
+                'Posts retrieved successfully',
+                postModels,
+            );
         } catch (error) {
             console.error('Error retrieving posts:', error);
             return BaseResponse.error<PostModel[]>(
@@ -52,7 +65,6 @@ export class PostService implements CrudService<Post, PostModel, PostDTO> {
             );
         }
     }
-
 
     // Add this method to your PostService
     async findAllByAuthor(authorId: number): Promise<BaseResponse<PostModel[]>> {
@@ -69,8 +81,13 @@ export class PostService implements CrudService<Post, PostModel, PostDTO> {
                 );
             }
 
-            const postModels = await Promise.all(posts.map(post => this.entityToModel(post)));
-            return BaseResponse.success<PostModel[]>('Posts retrieved successfully', postModels);
+            const postModels = await Promise.all(
+                posts.map((post) => this.entityToModel(post)),
+            );
+            return BaseResponse.success<PostModel[]>(
+                'Posts retrieved successfully',
+                postModels,
+            );
         } catch (error) {
             console.error('Error retrieving posts by author:', error);
             return BaseResponse.error<PostModel[]>(
@@ -80,7 +97,6 @@ export class PostService implements CrudService<Post, PostModel, PostDTO> {
             );
         }
     }
-
 
     async findOne(id: number): Promise<BaseResponse<PostModel>> {
         try {
@@ -92,7 +108,10 @@ export class PostService implements CrudService<Post, PostModel, PostDTO> {
                     'Internal Server Error',
                 );
             }
-            return BaseResponse.success<PostModel>('Post retrieved successfully', await this.entityToModel(post));
+            return BaseResponse.success<PostModel>(
+                'Post retrieved successfully',
+                await this.entityToModel(post),
+            );
         } catch (error) {
             console.error('Error retrieving post:', error);
             return BaseResponse.error<PostModel>(
@@ -128,20 +147,37 @@ export class PostService implements CrudService<Post, PostModel, PostDTO> {
                 );
             }
 
-            // Exclude 'authorId' from the update data
-            const { authorId, ...updateData } = data;
-
             // Update only if there are fields to update
-            if (Object.keys(updateData).length > 0) {
-                const updatedPostEntity = await this.postRepository.save({
-                    ...updatedPost,
-                    ...updateData,
-                });
+            if (Object.keys(data).length > 0) {
+                // Exclude 'authorId' from the update data
+                const { authorId, ...updateData } = data;
 
-                return BaseResponse.success<PostModel>('Post updated successfully', await this.entityToModel(updatedPostEntity));
+                // Explicitly set 'thumbnail' property in updateData
+                if ('thumbnail' in updateData && updatedPost.thumbnailPath !== data.thumbnail) {
+                    // Xoá file cũ trước khi lưu giá trị mới
+                    await FileUtils.deleteFile(updatedPost.thumbnailPath);
+                }
+    
+                // Explicitly set 'thumbnail' property in updateData
+                if ('thumbnail' in updateData) {
+                    updatedPost.thumbnailPath = data.thumbnail;
+                }
+        
+                // Update other fields in the post
+                Object.assign(updatedPost, updateData);
+
+                const updatedPostEntity = await this.postRepository.save(updatedPost);
+
+                return BaseResponse.success<PostModel>(
+                    'Post updated successfully',
+                    await this.entityToModel(updatedPostEntity),
+                );
             }
 
-            return BaseResponse.success<PostModel>('No fields to update', await this.entityToModel(updatedPost));
+            return BaseResponse.success<PostModel>(
+                'No fields to update',
+                await this.entityToModel(updatedPost),
+            );
         } catch (error) {
             console.error('Error updating post:', error);
             return BaseResponse.error<PostModel>(
@@ -152,7 +188,10 @@ export class PostService implements CrudService<Post, PostModel, PostDTO> {
         }
     }
 
-    async removeByAuthor(id: number, userId: number): Promise<BaseResponse<boolean>> {
+    async removeByAuthor(
+        id: number,
+        userId: number,
+    ): Promise<BaseResponse<boolean>> {
         try {
             const post = await this.postRepository.findOne({ where: { id } });
 
@@ -185,7 +224,6 @@ export class PostService implements CrudService<Post, PostModel, PostDTO> {
         }
     }
 
-
     async remove(id: number): Promise<BaseResponse<boolean>> {
         try {
             const post = await this.postRepository.findOne({ where: { id } });
@@ -211,11 +249,18 @@ export class PostService implements CrudService<Post, PostModel, PostDTO> {
         }
     }
 
-    async find(criteria: Record<string, any>): Promise<BaseResponse<PostModel[]>> {
+    async find(
+        criteria: Record<string, any>,
+    ): Promise<BaseResponse<PostModel[]>> {
         try {
             const posts = await this.postRepository.find(criteria);
-            const postModels = await Promise.all(posts.map(post => this.entityToModel(post)));
-            return BaseResponse.success<PostModel[]>('Posts found successfully', postModels);
+            const postModels = await Promise.all(
+                posts.map((post) => this.entityToModel(post)),
+            );
+            return BaseResponse.success<PostModel[]>(
+                'Posts found successfully',
+                postModels,
+            );
         } catch (error) {
             console.error('Error finding posts:', error);
             return BaseResponse.error<PostModel[]>(
@@ -259,7 +304,7 @@ export class PostService implements CrudService<Post, PostModel, PostDTO> {
             worksheet.columns = columns;
 
             // Add data to the worksheet
-            posts.forEach(post => {
+            posts.forEach((post) => {
                 worksheet.addRow({
                     id: post.id,
                     title: post.title,
@@ -284,13 +329,21 @@ export class PostService implements CrudService<Post, PostModel, PostDTO> {
         }
     }
 
-
     async entityToModel(entity: Post): Promise<PostModel> {
-        return new PostModel(entity.id, entity.title, entity.content, entity.createdAt, entity.updatedAt);
+        return new PostModel(
+            entity.id,
+            entity.title,
+            entity.content,
+            entity.thumbnailPath,
+            entity.createdAt,
+            entity.updatedAt,
+        );
     }
 
     async dtoToEntity(dto: PostDTO): Promise<Post> {
-        const user = await this.userRepository.findOne({ where: { id: dto.authorId } });
+        const user = await this.userRepository.findOne({
+            where: { id: dto.authorId },
+        });
 
         if (!user) {
             throw new Error('User not found');
@@ -300,8 +353,8 @@ export class PostService implements CrudService<Post, PostModel, PostDTO> {
         post.title = dto.title;
         post.content = dto.content;
         post.author = user;
+        post.thumbnailPath = dto.thumbnail;
 
         return post;
     }
-
 }

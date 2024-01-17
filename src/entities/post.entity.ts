@@ -12,7 +12,10 @@ export class Post {
 
   @Column({ type: 'text', nullable: true })
   content: string;
-  
+
+  @Column({name: 'thumbnail_path', length: 255, nullable: true})
+  thumbnailPath: string;
+
   @ManyToOne(() => User, user => user.posts)
   @Index('idx_author')
   author: User;
